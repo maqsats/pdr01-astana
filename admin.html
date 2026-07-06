@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDR 01 — Админ-панель</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0c;--bg-2:#101014;--bg-3:#17171d;--line:rgba(255,255,255,.09);
+  --txt:#f4f4f5;--muted:#8b8b93;--red:#e8362b;--red-2:#ff5245;--green:#22c55e;
+  --font-head:'Oswald',sans-serif;--font-body:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--txt);font-family:var(--font-body);padding-bottom:120px}
+a{color:var(--red-2)}
+.topbar{
+  position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:16px;
+  padding:14px min(4vw,32px);background:rgba(10,10,12,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);
+}
+.topbar .logo{font-family:var(--font-head);font-weight:700;font-size:20px;letter-spacing:.03em}
+.topbar .logo b{color:var(--red)}
+.topbar .spacer{flex:1}
+.wrap{width:min(880px,94vw);margin:0 auto}
+h2.sec{
+  font-family:var(--font-head);font-weight:600;text-transform:uppercase;font-size:20px;
+  margin:38px 0 4px;display:flex;align-items:center;gap:10px;
+}
+h2.sec::before{content:'';width:22px;height:3px;background:var(--red)}
+.hint{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.5}
+.card{background:var(--bg-2);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+label{display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+label:first-child{margin-top:0}
+input[type=text],input[type=password],input[type=number],textarea,select{
+  width:100%;background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;font-size:15px;color:var(--txt);font-family:inherit;outline:none;transition:border-color .2s;
+}
+input:focus,textarea:focus{border-color:var(--red)}
+textarea{resize:vertical;min-height:76px;line-height:1.5}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:640px){.row,.row3{grid-template-columns:1fr}}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px;
+  padding:12px 20px;border-radius:100px;background:var(--red);color:#fff;border:none;cursor:pointer;
+  font-family:inherit;transition:transform .2s,box-shadow .2s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(232,54,43,.4)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.btn.ghost:hover{box-shadow:none;border-color:rgba(255,255,255,.3)}
+.btn.sm{padding:8px 14px;font-size:13px}
+.btn.danger{background:transparent;border:1px solid rgba(232,54,43,.4);color:var(--red-2)}
+.btn.danger:hover{box-shadow:none;background:rgba(232,54,43,.12)}
+.item{
+  border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px;background:var(--bg);
+  position:relative;
+}
+.item .del{position:absolute;top:12px;right:12px}
+.item-head{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.1em;margin-bottom:4px}
+.imgfield{display:flex;gap:10px;align-items:center}
+.imgfield img{width:76px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--bg-3)}
+.imgfield input[type=text]{flex:1}
+.imgfield .up{white-space:nowrap}
+.savebar{
+  position:fixed;left:0;right:0;bottom:0;z-index:99;padding:14px min(4vw,32px);
+  background:rgba(10,10,12,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;
+}
+.savebar .status{flex:1;font-size:13.5px;color:var(--muted)}
+#toast{
+  position:fixed;top:74px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;
+}
+.toast{
+  background:var(--bg-3);border:1px solid var(--line);border-left:3px solid var(--green);
+  padding:12px 18px;border-radius:10px;font-size:14px;animation:tin .3s ease;max-width:340px;
+}
+.toast.err{border-left-color:var(--red)}
+@keyframes tin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.locked{opacity:.35;pointer-events:none;filter:blur(1px)}
+.badge{font-size:11px;font-weight:800;padding:4px 10px;border-radius:100px;background:rgba(34,197,94,.15);color:var(--green)}
+.badge.off{background:rgba(232,54,43,.15);color:var(--red-2)}
+code{background:var(--bg-3);padding:2px 6px;border-radius:6px;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">PDR <b>01</b> · админ</div>
+  <span class="badge off" id="connBadge">не подключено</span>
+  <div class="spacer"></div>
+  <a class="btn ghost sm" id="siteLink" href="index.html" target="_blank">Открыть сайт ↗</a>
+</div>
+
+<div class="wrap">
+
+  <h2 class="sec">Подключение</h2>
+  <p class="hint">Панель сохраняет изменения напрямую в GitHub-репозиторий — сайт обновится автоматически через ~1 минуту после сохранения. Токен хранится только в этом браузере.</p>
+  <div class="card">
+    <div class="row3">
+      <div><label>GitHub токен</label><input type="password" id="ghToken" placeholder="ghp_…"></div>
+      <div><label>Владелец</label><input type="text" id="ghOwner" value="maqsats"></div>
+      <div><label>Репозиторий</label><input type="text" id="ghRepo" value="pdr01-astana"></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="connectBtn">Подключиться и загрузить</button>
+    </div>
+  </div>
+
+  <div id="editor" class="locked">
+
+    <h2 class="sec">Контакты</h2>
+    <div class="card" id="fContacts"></div>
+
+    <h2 class="sec">Главный экран</h2>
+    <p class="hint">Заголовок из трёх строк, подпись и фоновое фото. В подписи можно выделять текст тегом <code>&lt;b&gt;…&lt;/b&gt;</code>.</p>
+    <div class="card" id="fHero"></div>
+
+    <h2 class="sec">Цифры (статистика)</h2>
+    <div id="fStats"></div>
+
+    <h2 class="sec">Бегущая строка</h2>
+    <div id="fMarquee"></div>
+
+    <h2 class="sec">Фото работ (До/После)</h2>
+    <p class="hint">Используются и в слайдере, и в галерее. Фото должно быть склейкой «до|после» по центру (как сейчас).</p>
+    <div id="fWorks"></div>
+
+    <h2 class="sec">Услуги и цены</h2>
+    <div id="fServices"></div>
+
+    <h2 class="sec">Как мы работаем (шаги)</h2>
+    <div id="fSteps"></div>
+
+    <h2 class="sec">Instagram</h2>
+    <div class="card" id="fIg"></div>
+    <div id="fReels"></div>
+
+    <h2 class="sec">Почему мы</h2>
+    <div id="fWhy"></div>
+
+    <h2 class="sec">Форма заявки</h2>
+    <p class="hint">В заголовке можно выделять текст красным тегом <code>&lt;i&gt;…&lt;/i&gt;</code>.</p>
+    <div class="card" id="fLead"></div>
+
+    <h2 class="sec">Вопросы и ответы</h2>
+    <div id="fFaq"></div>
+
+    <h2 class="sec">Подвал</h2>
+    <div class="card" id="fFooter"></div>
+
+  </div>
+</div>
+
+<div class="savebar">
+  <span class="status" id="status">Подключитесь, чтобы редактировать</span>
+  <button class="btn ghost" id="reloadBtn" disabled>Отменить изменения</button>
+  <button class="btn" id="saveBtn" disabled>💾 Сохранить и опубликовать</button>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- state ---------- */
+let data=null, fileSha=null;
+const LS='pdr01_admin';
+const $=id=>document.getElementById(id);
+const cfg=()=>({token:$('ghToken').value.trim(),owner:$('ghOwner').value.trim(),repo:$('ghRepo').value.trim()});
+const api=(p)=>`https://api.github.com/repos/${cfg().owner}/${cfg().repo}/contents/${p}`;
+const HDRS=()=>({'Authorization':'Bearer '+cfg().token,'Accept':'application/vnd.github+json'});
+
+function toast(msg,err){
+  const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;
+  $('toast').appendChild(t);setTimeout(()=>t.remove(),4200);
+}
+const b64decode=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')),c=>c.charCodeAt(0)));
+const b64encode=s=>{const b=new TextEncoder().encode(s);let x='';b.forEach(c=>x+=String.fromCharCode(c));return btoa(x)};
+
+/* ---------- github io ---------- */
+async function ghGet(path){
+  const r=await fetch(api(path)+'?ref=main&t='+Date.now(),{headers:HDRS()});
+  if(!r.ok)throw new Error(`GET ${path}: ${r.status}`);
+  return r.json();
+}
+async function ghPut(path,base64,msg,sha){
+  const body={message:msg,content:base64,branch:'main'};
+  if(sha)body.sha=sha;
+  const r=await fetch(api(path),{method:'PUT',headers:HDRS(),body:JSON.stringify(body)});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`PUT ${path}: ${r.status} ${e.message||''}`)}
+  return r.json();
+}
+
+/* ---------- form builders ---------- */
+function field(parent,lbl,get,set,opts={}){
+  const l=document.createElement('label');l.textContent=lbl;parent.appendChild(l);
+  const i=document.createElement(opts.area?'textarea':'input');
+  if(!opts.area)i.type=opts.type||'text';
+  i.value=get()??'';
+  i.addEventListener('input',()=>set(opts.type==='number'?+i.value:i.value));
+  parent.appendChild(i);
+  return i;
+}
+function imgField(parent,lbl,get,set){
+  const l=document.createElement('label');l.textContent=lbl;parent.appendChild(l);
+  const box=document.createElement('div');box.className='imgfield';
+  const img=document.createElement('img');img.src=get()||'';img.onerror=()=>img.removeAttribute('src');
+  const inp=document.createElement('input');inp.type='text';inp.value=get()??'';
+  inp.addEventListener('input',()=>{set(inp.value);img.src=inp.value;});
+  const up=document.createElement('button');up.className='btn ghost sm up';up.textContent='Загрузить фото';
+  const file=document.createElement('input');file.type='file';file.accept='image/*';file.hidden=true;
+  up.addEventListener('click',e=>{e.preventDefault();file.click();});
+  file.addEventListener('change',async()=>{
+    const f=file.files[0];if(!f)return;
+    up.disabled=true;up.textContent='Загрузка…';
+    try{
+      const buf=await f.arrayBuffer();
+      let bin='';new Uint8Array(buf).forEach(c=>bin+=String.fromCharCode(c));
+      const name='assets/'+Date.now()+'_'+f.name.toLowerCase().replace(/[^a-z0-9._-]+/g,'-');
+      await ghPut(name,btoa(bin),'assets: upload '+name);
+      inp.value=name;set(name);img.src=name;
+      toast('Фото загружено: '+name);
+    }catch(e){toast('Ошибка загрузки: '+e.message,true)}
+    up.disabled=false;up.textContent='Загрузить фото';
+  });
+  box.append(img,inp,up,file);parent.appendChild(box);
+}
+/* list of objects with per-item fields */
+function listSection(rootId,arr,makeItem,addLabel,newItem){
+  const root=$(rootId);root.innerHTML='';
+  arr.forEach((item,i)=>{
+    const card=document.createElement('div');card.className='item';
+    const head=document.createElement('div');head.className='item-head';head.textContent='#'+(i+1);card.appendChild(head);
+    const del=document.createElement('button');del.className='btn danger sm del';del.textContent='Удалить';
+    del.addEventListener('click',()=>{arr.splice(i,1);listSection(rootId,arr,makeItem,addLabel,newItem);});
+    card.appendChild(del);
+    makeItem(card,item,i);
+    root.appendChild(card);
+  });
+  const add=document.createElement('button');add.className='btn ghost sm';add.textContent='+ '+addLabel;
+  add.addEventListener('click',()=>{arr.push(newItem());listSection(rootId,arr,makeItem,addLabel,newItem);});
+  root.appendChild(add);
+}
+
+/* ---------- render all forms ---------- */
+function render(){
+  const c=data;
+  const F=$('fContacts');F.innerHTML='';
+  field(F,'Телефон (как на сайте)',()=>c.contacts.phone,v=>c.contacts.phone=v);
+  const r1=document.createElement('div');r1.className='row';F.appendChild(r1);
+  const d1=document.createElement('div'),d2=document.createElement('div');r1.append(d1,d2);
+  field(d1,'WhatsApp (только цифры)',()=>c.contacts.whatsapp,v=>c.contacts.whatsapp=v);
+  field(d2,'Instagram (ник без @)',()=>c.contacts.instagram,v=>c.contacts.instagram=v);
+  const r2=document.createElement('div');r2.className='row';F.appendChild(r2);
+  const d3=document.createElement('div'),d4=document.createElement('div');r2.append(d3,d4);
+  field(d3,'Город',()=>c.contacts.city,v=>c.contacts.city=v);
+  field(d4,'Часы работы',()=>c.contacts.hours,v=>c.contacts.hours=v);
+
+  const H=$('fHero');H.innerHTML='';
+  field(H,'Бейдж над заголовком',()=>c.hero.tag,v=>c.hero.tag=v);
+  const hr=document.createElement('div');hr.className='row3';H.appendChild(hr);
+  const h1=document.createElement('div'),h2=document.createElement('div'),h3=document.createElement('div');hr.append(h1,h2,h3);
+  field(h1,'Строка 1',()=>c.hero.line1,v=>c.hero.line1=v);
+  field(h2,'Строка 2',()=>c.hero.line2,v=>c.hero.line2=v);
+  field(h3,'Строка 3 (красная)',()=>c.hero.line3,v=>c.hero.line3=v);
+  field(H,'Подпись под заголовком',()=>c.hero.sub,v=>c.hero.sub=v,{area:true});
+  field(H,'Заметка под кнопками',()=>c.hero.note,v=>c.hero.note=v);
+  imgField(H,'Фоновое фото',()=>c.hero.image,v=>c.hero.image=v);
+
+  listSection('fStats',c.hero.stats,(card,s)=>{
+    const r=document.createElement('div');r.className='row3';card.appendChild(r);
+    const a=document.createElement('div'),b=document.createElement('div'),d=document.createElement('div');r.append(a,b,d);
+    field(a,'Число',()=>s.value,v=>s.value=v,{type:'number'});
+    field(b,'Суффикс (+, %, года)',()=>s.suffix,v=>s.suffix=v);
+    field(d,'Подпись',()=>s.label,v=>s.label=v);
+  },'Добавить цифру',()=>({value:0,suffix:'+',label:''}));
+
+  listSection('fMarquee',c.marquee,(card,s,i)=>{
+    field(card,'Текст',()=>c.marquee[i],v=>c.marquee[i]=v);
+  },'Добавить пункт',()=>'');
+
+  listSection('fWorks',c.works,(card,s,i)=>{
+    imgField(card,'Фото (склейка до|после)',()=>c.works[i],v=>c.works[i]=v);
+  },'Добавить фото',()=>'');
+
+  listSection('fServices',c.services,(card,s)=>{
+    field(card,'Название',()=>s.title,v=>s.title=v);
+    field(card,'Описание',()=>s.desc,v=>s.desc=v,{area:true});
+    field(card,'Цена',()=>s.price,v=>s.price=v);
+  },'Добавить услугу',()=>({title:'',desc:'',price:''}));
+
+  listSection('fSteps',c.steps,(card,s)=>{
+    field(card,'Название шага',()=>s.title,v=>s.title=v);
+    field(card,'Описание',()=>s.desc,v=>s.desc=v,{area:true});
+    field(card,'Время',()=>s.time,v=>s.time=v);
+  },'Добавить шаг',()=>({title:'',desc:'',time:''}));
+
+  const G=$('fIg');G.innerHTML='';
+  field(G,'Название профиля',()=>c.instagramBlock.name,v=>c.instagramBlock.name=v);
+  field(G,'Подписчики (текст)',()=>c.instagramBlock.followers,v=>c.instagramBlock.followers=v);
+  imgField(G,'Аватар',()=>c.instagramBlock.avatar,v=>c.instagramBlock.avatar=v);
+
+  listSection('fReels',c.instagramBlock.reels,(card,s)=>{
+    imgField(card,'Обложка',()=>s.image,v=>s.image=v);
+    field(card,'Ссылка на Reels',()=>s.url,v=>s.url=v);
+    const r=document.createElement('div');r.className='row';card.appendChild(r);
+    const a=document.createElement('div'),b=document.createElement('div');r.append(a,b);
+    field(a,'Заголовок',()=>s.title,v=>s.title=v);
+    field(b,'Подпись',()=>s.subtitle,v=>s.subtitle=v);
+  },'Добавить видео',()=>({image:'',url:'',title:'',subtitle:''}));
+
+  listSection('fWhy',c.why,(card,s)=>{
+    field(card,'Заголовок',()=>s.title,v=>s.title=v);
+    field(card,'Текст',()=>s.desc,v=>s.desc=v,{area:true});
+  },'Добавить преимущество',()=>({title:'',desc:''}));
+
+  const L=$('fLead');L.innerHTML='';
+  field(L,'Заголовок',()=>c.lead.title,v=>c.lead.title=v);
+  field(L,'Текст',()=>c.lead.text,v=>c.lead.text=v,{area:true});
+  L.insertAdjacentHTML('beforeend','<label>Плюсы (через запятую)</label>');
+  const perks=document.createElement('input');perks.type='text';perks.value=c.lead.perks.join(', ');
+  perks.addEventListener('input',()=>c.lead.perks=perks.value.split(',').map(s=>s.trim()).filter(Boolean));
+  L.appendChild(perks);
+
+  listSection('fFaq',c.faq,(card,s)=>{
+    field(card,'Вопрос',()=>s.q,v=>s.q=v);
+    field(card,'Ответ',()=>s.a,v=>s.a=v,{area:true});
+  },'Добавить вопрос',()=>({q:'',a:''}));
+
+  const FT=$('fFooter');FT.innerHTML='';
+  field(FT,'Текст о компании',()=>c.footer.about,v=>c.footer.about=v,{area:true});
+}
+
+/* ---------- connect / load / save ---------- */
+async function connect(){
+  const {token,owner,repo}=cfg();
+  if(!token||!owner||!repo)return toast('Заполните токен, владельца и репозиторий',true);
+  $('connectBtn').disabled=true;$('connectBtn').textContent='Загрузка…';
+  try{
+    const f=await ghGet('content.json');
+    fileSha=f.sha;
+    data=JSON.parse(b64decode(f.content));
+    localStorage.setItem(LS,JSON.stringify({token,owner,repo}));
+    render();
+    $('editor').classList.remove('locked');
+    $('saveBtn').disabled=false;$('reloadBtn').disabled=false;
+    $('connBadge').textContent='подключено';$('connBadge').classList.remove('off');
+    $('status').textContent='Контент загружен. Меняйте поля и нажмите «Сохранить».';
+    toast('Контент загружен');
+  }catch(e){toast('Не удалось подключиться: '+e.message,true)}
+  $('connectBtn').disabled=false;$('connectBtn').textContent='Подключиться и загрузить';
+}
+async function save(){
+  $('saveBtn').disabled=true;$('status').textContent='Сохранение…';
+  data.marquee=data.marquee.filter(s=>s&&s.trim());
+  data.works=data.works.filter(s=>s&&s.trim());
+  try{
+    /* re-fetch sha in case the file changed since load */
+    try{const f=await ghGet('content.json');fileSha=f.sha;}catch(_){}
+    const res=await ghPut('content.json',b64encode(JSON.stringify(data,null,2)),'content: update via admin panel',fileSha);
+    fileSha=res.content.sha;
+    $('status').textContent='Сохранено '+new Date().toLocaleTimeString('ru-RU')+'. Сайт обновится через ~1 минуту.';
+    toast('Опубликовано! Сайт обновится через ~1 минуту.');
+  }catch(e){
+    $('status').textContent='Ошибка сохранения';
+    toast('Ошибка: '+e.message,true);
+  }
+  $('saveBtn').disabled=false;
+}
+$('connectBtn').addEventListener('click',connect);
+$('saveBtn').addEventListener('click',save);
+$('reloadBtn').addEventListener('click',connect);
+/* restore saved settings */
+try{
+  const s=JSON.parse(localStorage.getItem(LS)||'{}');
+  if(s.token)$('ghToken').value=s.token;
+  if(s.owner)$('ghOwner').value=s.owner;
+  if(s.repo)$('ghRepo').value=s.repo;
+  if(s.token)connect();
+}catch(_){}
+</script>
+</body>
+</html>
